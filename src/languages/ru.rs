@@ -130,18 +130,13 @@ fn verbalize_internal(n: u64) -> String {
             let chunk_str = verbalize_chunk(chunk, use_feminine);
 
             if scale_idx > 0 {
-                let scale = match SCALES[scale_idx] {
-                    (one, few, many) => {
-                        if chunk % 10 == 1 && chunk % 100 != 11 {
-                            one
-                        } else if (2..=4).contains(&(chunk % 10))
-                            && !(12..=14).contains(&(chunk % 100))
-                        {
-                            few
-                        } else {
-                            many
-                        }
-                    }
+                let (one, few, many) = SCALES[scale_idx];
+                let scale = if chunk % 10 == 1 && chunk % 100 != 11 {
+                    one
+                } else if (2..=4).contains(&(chunk % 10)) && !(12..=14).contains(&(chunk % 100)) {
+                    few
+                } else {
+                    many
                 };
                 if !chunk_str.is_empty() {
                     parts.push(format!("{} {}", chunk_str, scale));

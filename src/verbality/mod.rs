@@ -20,7 +20,7 @@ impl VerbalizerRegistry {
     }
 
     pub fn get(&self, code: &str) -> Option<&dyn Verbalizer> {
-        self.map.get(code).map(|&v| v)
+        self.map.get(code).copied()
     }
 
     pub fn codes(&self) -> Vec<&'static str> {
