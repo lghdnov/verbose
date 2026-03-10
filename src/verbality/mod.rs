@@ -1,10 +1,28 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::LazyLock;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum VerbalizeError {
+    NumberTooLarge(u64, u64),
+}
+
+impl fmt::Display for VerbalizeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VerbalizeError::NumberTooLarge(n, m) => {
+                write!(f, "Number {} exceeds maximum supported value {}", n, m)
+            }
+        }
+    }
+}
+
+impl std::error::Error for VerbalizeError {}
 
 pub trait Verbalizer: Send + Sync {
     fn code(&self) -> &'static str;
     fn name(&self) -> &'static str;
-    fn verbalize(&self, n: u64) -> String;
+    fn verbalize(&self, n: u64) -> Result<String, VerbalizeError>;
 }
 
 inventory::collect!(&'static dyn Verbalizer);

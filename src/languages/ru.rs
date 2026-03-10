@@ -1,7 +1,9 @@
 use crate::register_verbalizer;
-use crate::verbality::Verbalizer;
+use crate::verbality::{VerbalizeError, Verbalizer};
 
 pub struct RussianVerbalizer;
+
+const MAX_VERBALIZABLE: u64 = 999_999_999_999_999; // 10^15 - 1 (quadrillion - 1)
 
 impl Verbalizer for RussianVerbalizer {
     fn code(&self) -> &'static str {
@@ -12,11 +14,14 @@ impl Verbalizer for RussianVerbalizer {
         "Русский"
     }
 
-    fn verbalize(&self, n: u64) -> String {
-        if n == 0 {
-            return "ноль".to_string();
+    fn verbalize(&self, n: u64) -> Result<String, VerbalizeError> {
+        if n > MAX_VERBALIZABLE {
+            return Err(VerbalizeError::NumberTooLarge(n, MAX_VERBALIZABLE));
         }
-        verbalize_internal(n)
+        if n == 0 {
+            return Ok("ноль".to_string());
+        }
+        Ok(verbalize_internal(n))
     }
 }
 
@@ -182,7 +187,7 @@ mod russian {
         ];
 
         for (n, expected) in tests {
-            assert_eq!(v.verbalize(n), expected);
+            assert_eq!(v.verbalize(n).unwrap(), expected);
         }
     }
 
@@ -201,7 +206,7 @@ mod russian {
         ];
 
         for (n, expected) in tests {
-            assert_eq!(v.verbalize(n), expected);
+            assert_eq!(v.verbalize(n).unwrap(), expected);
         }
     }
 
@@ -226,7 +231,7 @@ mod russian {
         ];
 
         for (n, expected) in tests {
-            assert_eq!(v.verbalize(n), expected);
+            assert_eq!(v.verbalize(n).unwrap(), expected);
         }
     }
 
@@ -246,7 +251,7 @@ mod russian {
         ];
 
         for (n, expected) in tests {
-            assert_eq!(v.verbalize(n), expected);
+            assert_eq!(v.verbalize(n).unwrap(), expected);
         }
     }
 
@@ -265,7 +270,7 @@ mod russian {
         ];
 
         for (n, expected) in tests {
-            assert_eq!(v.verbalize(n), expected);
+            assert_eq!(v.verbalize(n).unwrap(), expected);
         }
     }
 
@@ -284,7 +289,7 @@ mod russian {
         ];
 
         for (n, expected) in tests {
-            assert_eq!(v.verbalize(n), expected);
+            assert_eq!(v.verbalize(n).unwrap(), expected);
         }
     }
 }

@@ -33,5 +33,11 @@ fn main() {
         }
     };
 
-    println!("{}", verbalizer.verbalize(args.number));
+    match verbalizer.verbalize(args.number) {
+        Ok(result) => println!("{}", result),
+        Err(e) => {
+            eprintln!("Error: {}.", e);
+            std::process::exit(1);
+        }
+    }
 }
