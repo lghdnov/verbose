@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 pub trait Verbalizer: Send + Sync {
     fn code(&self) -> &'static str;
@@ -6,8 +7,9 @@ pub trait Verbalizer: Send + Sync {
     fn verbalize(&self, n: u64) -> String;
 }
 
+#[derive(Clone)]
 pub struct VerbalizerRegistry {
-    map: HashMap<&'static str, Box<dyn Verbalizer>>,
+    map: HashMap<&'static str, &'static dyn Verbalizer>,
 }
 
 impl VerbalizerRegistry {
@@ -17,25 +19,8 @@ impl VerbalizerRegistry {
         }
     }
 
-    #[cfg(feature = "lang-ru")]
-    pub fn with_ru(self) -> Self {
-        use crate::languages::ru::RussianVerbalizer;
-        self.with(RussianVerbalizer)
-    }
-
-    #[cfg(feature = "lang-en")]
-    pub fn with_en(self) -> Self {
-        use crate::languages::en::EnglishVerbalizer;
-        self.with(EnglishVerbalizer)
-    }
-
-    pub fn with<V: Verbalizer + 'static>(mut self, verbalizer: V) -> Self {
-        self.map.insert(verbalizer.code(), Box::new(verbalizer));
-        self
-    }
-
     pub fn get(&self, code: &str) -> Option<&dyn Verbalizer> {
-        self.map.get(code).map(|b| b.as_ref())
+        self.map.get(code).map(|&v| v)
     }
 
     pub fn codes(&self) -> Vec<&'static str> {
@@ -43,19 +28,34 @@ impl VerbalizerRegistry {
     }
 }
 
+static REGISTRY: LazyLock<VerbalizerRegistry> = LazyLock::new(|| {
+    let mut registry = VerbalizerRegistry::new();
+
+    #[cfg(feature = "lang-ru")]
+    {
+        use crate::languages::ru::RussianVerbalizer;
+        let v: &'static dyn Verbalizer = &RussianVerbalizer;
+        registry.map.insert("ru", v);
+    }
+
+    #[cfg(feature = "lang-en")]
+    {
+        use crate::languages::en::EnglishVerbalizer;
+        let v: &'static dyn Verbalizer = &EnglishVerbalizer;
+        registry.map.insert("en", v);
+    }
+
+    registry
+});
+
 impl Default for VerbalizerRegistry {
     fn default() -> Self {
-        let mut registry = Self::new();
-        #[cfg(feature = "lang-ru")]
-        {
-            use crate::languages::ru::RussianVerbalizer;
-            registry = registry.with(RussianVerbalizer);
-        }
-        #[cfg(feature = "lang-en")]
-        {
-            use crate::languages::en::EnglishVerbalizer;
-            registry = registry.with(EnglishVerbalizer);
-        }
-        registry
+        REGISTRY.clone()
+    }
+}
+
+impl Default for &VerbalizerRegistry {
+    fn default() -> Self {
+        &REGISTRY
     }
 }
