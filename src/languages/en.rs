@@ -1,3 +1,4 @@
+use crate::register_verbalizer;
 use crate::verbality::Verbalizer;
 
 pub struct EnglishVerbalizer;
@@ -18,6 +19,8 @@ impl Verbalizer for EnglishVerbalizer {
         verbalize_internal(n)
     }
 }
+
+register_verbalizer!(&EnglishVerbalizer as &dyn Verbalizer);
 
 fn verbalize_internal(n: u64) -> String {
     const UNITS: &[&str] = &[

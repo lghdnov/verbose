@@ -7,55 +7,45 @@ pub trait Verbalizer: Send + Sync {
     fn verbalize(&self, n: u64) -> String;
 }
 
-#[derive(Clone)]
+inventory::collect!(&'static dyn Verbalizer);
+
 pub struct VerbalizerRegistry {
     map: HashMap<&'static str, &'static dyn Verbalizer>,
 }
 
 impl VerbalizerRegistry {
-    pub fn new() -> Self {
-        Self {
-            map: HashMap::new(),
+    fn new() -> Self {
+        let mut map = HashMap::new();
+
+        for v in inventory::iter::<&'static dyn Verbalizer> {
+            map.insert(v.code(), *v);
         }
+
+        Self { map }
     }
 
     pub fn get(&self, code: &str) -> Option<&dyn Verbalizer> {
         self.map.get(code).copied()
     }
 
-    pub fn codes(&self) -> Vec<&'static str> {
-        self.map.keys().copied().collect()
+    pub fn codes(&self) -> impl Iterator<Item = &'static str> + '_ {
+        self.map.keys().copied()
+    }
+
+    pub fn codes_string(&self) -> String {
+        self.codes().collect::<Vec<_>>().join(", ")
     }
 }
 
-static REGISTRY: LazyLock<VerbalizerRegistry> = LazyLock::new(|| {
-    let mut registry = VerbalizerRegistry::new();
+static REGISTRY: LazyLock<VerbalizerRegistry> = LazyLock::new(VerbalizerRegistry::new);
 
-    #[cfg(feature = "lang-ru")]
-    {
-        use crate::languages::ru::RussianVerbalizer;
-        let v: &'static dyn Verbalizer = &RussianVerbalizer;
-        registry.map.insert("ru", v);
-    }
-
-    #[cfg(feature = "lang-en")]
-    {
-        use crate::languages::en::EnglishVerbalizer;
-        let v: &'static dyn Verbalizer = &EnglishVerbalizer;
-        registry.map.insert("en", v);
-    }
-
-    registry
-});
-
-impl Default for VerbalizerRegistry {
-    fn default() -> Self {
-        REGISTRY.clone()
-    }
+pub fn registry() -> &'static VerbalizerRegistry {
+    &REGISTRY
 }
 
-impl Default for &VerbalizerRegistry {
-    fn default() -> Self {
-        &REGISTRY
-    }
+#[macro_export]
+macro_rules! register_verbalizer {
+    ($v:expr) => {
+        inventory::submit!($v as &'static dyn $crate::verbality::Verbalizer);
+    };
 }

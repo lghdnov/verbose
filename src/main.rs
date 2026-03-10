@@ -1,5 +1,5 @@
 use clap::Parser;
-use verbose::VerbalizerRegistry;
+use verbose::verbality;
 
 #[derive(Parser, Debug)]
 #[command(name = "verbose")]
@@ -15,7 +15,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let registry = VerbalizerRegistry::default();
+    let registry = verbality::registry();
 
     let verbalizer = match registry.get(&args.lang) {
         Some(v) => v,
@@ -23,7 +23,7 @@ fn main() {
             eprintln!(
                 "Error: unknown language '{}'. Available: {}",
                 args.lang,
-                registry.codes().join(", ")
+                registry.codes_string()
             );
             std::process::exit(1);
         }
