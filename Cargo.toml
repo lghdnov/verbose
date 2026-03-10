@@ -8,9 +8,10 @@ clap = { version = "4.5", features = ["derive"] }
 inventory = "0.3"
 
 [features]
-default = ["lang-ru", "lang-en"]
+default = ["lang-ru", "lang-en", "lang-sv"]
 lang-ru = []
 lang-en = []
+lang-sv = []
 
 [profile.release]
 opt-level = 3

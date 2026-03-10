@@ -38,7 +38,8 @@ fn verbalize_number(n: u64) -> String {
             let chunk_text = verbalize_chunk(chunk);
 
             if scale > 0 {
-                result.push(format!("{chunk_text} {}", SCALES[scale]));
+                let scale_word = SCALES[scale];
+                result.push(format!("{chunk_text} {scale_word}"));
             } else {
                 result.push(chunk_text);
             }
