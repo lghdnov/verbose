@@ -1,21 +1,25 @@
-use clap::Parser;
+use clap::{CommandFactory, FromArgMatches, Parser};
 use verbose::verbality;
 
 #[derive(Parser, Debug)]
 #[command(name = "verbose")]
-#[command(about = "Number verbalization utility", long_about = None)]
+#[command(about = "Number verbalization utility")]
 struct Args {
     #[arg(help = "Number to verbalize")]
     number: u64,
 
-    #[arg(short, long, help = "Language: ru, en")]
+    #[arg(short, long)]
     lang: String,
 }
 
 fn main() {
-    let args = Args::parse();
-
     let registry = verbality::registry();
+    let langs = registry.codes_string();
+    let mut cmd = Args::command();
+    cmd = cmd.mut_arg("lang", |arg| arg.help(format!("Language ({})", langs)));
+
+    let matches = cmd.get_matches();
+    let args = Args::from_arg_matches(&matches).unwrap();
 
     let verbalizer = match registry.get(&args.lang) {
         Some(v) => v,
@@ -29,6 +33,5 @@ fn main() {
         }
     };
 
-    let result = verbalizer.verbalize(args.number);
-    println!("{}", result);
+    println!("{}", verbalizer.verbalize(args.number));
 }
