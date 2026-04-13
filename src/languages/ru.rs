@@ -1,5 +1,7 @@
 use crate::register_verbalizer;
 use crate::verbality::{VerbalizeError, Verbalizer};
+use core::fmt;
+use std::fmt::Write;
 
 pub struct RussianVerbalizer;
 
@@ -8,7 +10,6 @@ const DELIMITER: u64 = 100;
 const CHUNK_DELIMITER: u64 = 1000;
 const MAX_NUMBER: u64 = 999_999_999_999_999;
 const FEMININE_SCALE: usize = 1;
-const SCALE_COUNT: usize = 5;
 
 impl Verbalizer for RussianVerbalizer {
     fn code(&self) -> &'static str {
@@ -25,70 +26,83 @@ impl Verbalizer for RussianVerbalizer {
         if n == 0 {
             return Ok("ноль".to_string());
         }
-        Ok(verbalize_number(n))
+
+        let mut out = String::with_capacity(128);
+        verbalize_number(n, &mut out)?;
+        Ok(out)
     }
 }
 
-register_verbalizer!(&RussianVerbalizer as &dyn Verbalizer);
+pub fn verbalize_number<W: Write>(n: u64, out: &mut W) -> Result<(), VerbalizeError> {
+    let mut max_scale = 0;
+    let mut temp = n;
+    while temp >= CHUNK_DELIMITER {
+        temp /= CHUNK_DELIMITER;
+        max_scale += 1;
+    }
 
-fn verbalize_number(n: u64) -> String {
-    let mut parts = Vec::with_capacity(SCALE_COUNT);
-    let mut remaining = n;
-    let mut scale_idx = 0;
+    let mut divisor = CHUNK_DELIMITER.pow(max_scale as u32);
+    let mut first_chunk = true;
 
-    while remaining > 0 {
-        let chunk = remaining % CHUNK_DELIMITER;
-        remaining /= CHUNK_DELIMITER;
+    for scale_idx in (0..=max_scale).rev() {
+        let chunk = (n / divisor) % CHUNK_DELIMITER;
+        divisor /= CHUNK_DELIMITER;
 
         if chunk == 0 {
-            scale_idx += 1;
             continue;
         }
 
-        let is_feminine = scale_idx == FEMININE_SCALE;
-        let chunk_text = verbalize_chunk(chunk, is_feminine);
-        let part = match scale_idx {
-            0 => chunk_text,
-            _ => {
-                let scale = select_scale_form(chunk, scale_idx);
-                format!("{chunk_text} {scale}")
-            }
-        };
+        if !first_chunk {
+            out.write_char(' ')?;
+        }
+        first_chunk = false;
 
-        parts.push(part);
-        scale_idx += 1;
+        let is_feminine = scale_idx == FEMININE_SCALE;
+        verbalize_chunk(chunk, is_feminine, out)?;
+
+        if scale_idx > 0 {
+            out.write_char(' ')?;
+            out.write_str(select_scale_form(chunk, scale_idx))?;
+        }
     }
 
-    parts.reverse();
-    parts.join(" ")
+    Ok(())
 }
 
-fn verbalize_chunk(n: u64, feminine: bool) -> String {
+fn verbalize_chunk<W: Write>(n: u64, feminine: bool, out: &mut W) -> Result<(), VerbalizeError> {
     let hundreds = (n / DELIMITER) as usize;
     let tens = ((n / BASE) % BASE) as usize;
     let units = (n % BASE) as usize;
 
-    let mut words = Vec::with_capacity(3);
+    let mut needs_space = false;
+    let mut write_word = |word: &str| -> Result<(), VerbalizeError> {
+        if needs_space {
+            out.write_char(' ')?;
+        }
+        out.write_str(word)?;
+        needs_space = true;
+        Ok(())
+    };
+
     if hundreds > 0 {
-        words.push(HUNDREDS[hundreds]);
+        write_word(HUNDREDS[hundreds])?;
     }
 
-    match tens {
-        1 => words.push(TEENS[units]),
-        2..=9 => words.push(TENS[tens]),
-        _ => {}
+    if tens == 1 {
+        write_word(TEENS[units])?;
+    } else if tens >= 2 {
+        write_word(TENS[tens])?;
     }
 
     if units > 0 && tens != 1 {
-        let unit_word = if feminine {
+        write_word(if feminine {
             UNITS_FEM[units]
         } else {
             UNITS_MASC[units]
-        };
-        words.push(unit_word);
+        })?;
     }
 
-    words.join(" ")
+    Ok(())
 }
 
 fn select_scale_form(n: u64, scale_idx: usize) -> &'static str {

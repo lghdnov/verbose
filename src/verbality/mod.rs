@@ -5,6 +5,13 @@ use std::sync::LazyLock;
 #[derive(Debug, Clone, PartialEq)]
 pub enum VerbalizeError {
     NumberTooLarge(u64, u64),
+    FmtError(std::fmt::Error),
+}
+
+impl From<std::fmt::Error> for VerbalizeError {
+    fn from(err: std::fmt::Error) -> Self {
+        Self::FmtError(err)
+    }
 }
 
 impl fmt::Display for VerbalizeError {
@@ -13,6 +20,7 @@ impl fmt::Display for VerbalizeError {
             VerbalizeError::NumberTooLarge(n, m) => {
                 write!(f, "Number {} exceeds maximum supported value {}", n, m)
             }
+            VerbalizeError::FmtError(err) => write!(f, "Fmt error: {}", err),
         }
     }
 }
