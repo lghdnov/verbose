@@ -3,7 +3,12 @@ use crate::verbality::{VerbalizeError, Verbalizer};
 
 pub struct RussianVerbalizer;
 
-const MAX: u64 = 999_999_999_999_999;
+const BASE: u64 = 10;
+const DELIMITER: u64 = 100;
+const CHUNK_DELIMITER: u64 = 1000;
+const MAX_NUMBER: u64 = 999_999_999_999_999;
+const FEMININE_SCALE: usize = 1;
+const SCALE_COUNT: usize = 5;
 
 impl Verbalizer for RussianVerbalizer {
     fn code(&self) -> &'static str {
@@ -14,8 +19,8 @@ impl Verbalizer for RussianVerbalizer {
     }
 
     fn verbalize(&self, n: u64) -> Result<String, VerbalizeError> {
-        if n > MAX {
-            return Err(VerbalizeError::NumberTooLarge(n, MAX));
+        if n > MAX_NUMBER {
+            return Err(VerbalizeError::NumberTooLarge(n, MAX_NUMBER));
         }
         if n == 0 {
             return Ok("ноль".to_string());
@@ -27,84 +32,80 @@ impl Verbalizer for RussianVerbalizer {
 register_verbalizer!(&RussianVerbalizer as &dyn Verbalizer);
 
 fn verbalize_number(n: u64) -> String {
-    let mut result = Vec::new();
+    let mut parts = Vec::with_capacity(SCALE_COUNT);
     let mut remaining = n;
-    let mut scale = 0;
+    let mut scale_idx = 0;
 
     while remaining > 0 {
-        let chunk = remaining % 1000;
+        let chunk = remaining % CHUNK_DELIMITER;
+        remaining /= CHUNK_DELIMITER;
 
-        if chunk > 0 {
-            let chunk_text = verbalize_chunk(chunk, scale == 1);
-
-            if scale > 0 {
-                let scale_text = select_scale_form(chunk, scale);
-                result.push(format!("{chunk_text} {scale_text}"));
-            } else {
-                result.push(chunk_text);
-            }
+        if chunk == 0 {
+            scale_idx += 1;
+            continue;
         }
 
-        remaining /= 1000;
-        scale += 1;
+        let is_feminine = scale_idx == FEMININE_SCALE;
+        let chunk_text = verbalize_chunk(chunk, is_feminine);
+        let part = match scale_idx {
+            0 => chunk_text,
+            _ => {
+                let scale = select_scale_form(chunk, scale_idx);
+                format!("{chunk_text} {scale}")
+            }
+        };
+
+        parts.push(part);
+        scale_idx += 1;
     }
 
-    result.reverse();
-    result.join(" ")
+    parts.reverse();
+    parts.join(" ")
 }
 
 fn verbalize_chunk(n: u64, feminine: bool) -> String {
-    let hundreds = (n / 100) as usize;
-    let tens = ((n / 10) % 10) as usize;
-    let units = (n % 10) as usize;
+    let hundreds = (n / DELIMITER) as usize;
+    let tens = ((n / BASE) % BASE) as usize;
+    let units = (n % BASE) as usize;
 
-    let mut parts = Vec::new();
-
+    let mut words = Vec::with_capacity(3);
     if hundreds > 0 {
-        parts.push(HUNDREDS[hundreds]);
+        words.push(HUNDREDS[hundreds]);
     }
-
-    let units_words = if feminine {
-        UNITS_FEMININE
-    } else {
-        UNITS_MASCULINE
-    };
 
     match tens {
-        0 => {
-            if units > 0 {
-                parts.push(units_words[units]);
-            }
-        }
-        1 => {
-            parts.push(TEENS[units]);
-        }
-        _ => {
-            if tens > 1 {
-                parts.push(TENS[tens]);
-            }
-            if units > 0 {
-                parts.push(units_words[units]);
-            }
-        }
+        1 => words.push(TEENS[units]),
+        2..=9 => words.push(TENS[tens]),
+        _ => {}
     }
 
-    parts.join(" ")
+    if units > 0 && tens != 1 {
+        let unit_word = if feminine {
+            UNITS_FEM[units]
+        } else {
+            UNITS_MASC[units]
+        };
+        words.push(unit_word);
+    }
+
+    words.join(" ")
 }
 
 fn select_scale_form(n: u64, scale_idx: usize) -> &'static str {
     let (one, few, many) = SCALES[scale_idx];
+    let last_digit = n % BASE;
+    let last_two = n % DELIMITER;
 
-    if n % 10 == 1 && n % 100 != 11 {
+    if last_digit == 1 && last_two != 11 {
         one
-    } else if (2..=4).contains(&(n % 10)) && !(12..=14).contains(&(n % 100)) {
+    } else if (2..=4).contains(&last_digit) && !(12..=14).contains(&last_two) {
         few
     } else {
         many
     }
 }
 
-const UNITS_MASCULINE: &[&str] = &[
+const UNITS_MASC: &[&str] = &[
     "",
     "один",
     "два",
@@ -117,7 +118,7 @@ const UNITS_MASCULINE: &[&str] = &[
     "девять",
 ];
 
-const UNITS_FEMININE: &[&str] = &[
+const UNITS_FEM: &[&str] = &[
     "",
     "одна",
     "две",
