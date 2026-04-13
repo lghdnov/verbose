@@ -1,15 +1,6 @@
-use crate::register_verbalizer;
-use crate::verbality::{VerbalizeError, Verbalizer};
-use core::fmt;
-use std::fmt::Write;
+use crate::verbality::{core::verbalize_number, *};
 
 pub struct RussianVerbalizer;
-
-const BASE: u64 = 10;
-const DELIMITER: u64 = 100;
-const CHUNK_DELIMITER: u64 = 1000;
-const MAX_NUMBER: u64 = 999_999_999_999_999;
-const FEMININE_SCALE: usize = 1;
 
 impl Verbalizer for RussianVerbalizer {
     fn code(&self) -> &'static str {
@@ -18,105 +9,68 @@ impl Verbalizer for RussianVerbalizer {
     fn name(&self) -> &'static str {
         "Русский"
     }
-
     fn verbalize(&self, n: u64) -> Result<String, VerbalizeError> {
-        if n > MAX_NUMBER {
-            return Err(VerbalizeError::NumberTooLarge(n, MAX_NUMBER));
-        }
-        if n == 0 {
-            return Ok("ноль".to_string());
-        }
-
         let mut out = String::with_capacity(128);
-        verbalize_number(n, &mut out)?;
+        verbalize_number::<RussianVerbalizer, _>(self, n, &mut out)?;
         Ok(out)
     }
-}
 
-pub fn verbalize_number<W: Write>(n: u64, out: &mut W) -> Result<(), VerbalizeError> {
-    let mut max_scale = 0;
-    let mut temp = n;
-    while temp >= CHUNK_DELIMITER {
-        temp /= CHUNK_DELIMITER;
-        max_scale += 1;
+    fn zero(&self) -> &'static str {
+        "ноль"
+    }
+    fn chunk_base(&self) -> u64 {
+        1000
+    }
+    fn unit(&self, d: usize, g: Gender) -> &'static str {
+        match g {
+            Gender::Fem => UNITS_FEM[d],
+            _ => UNITS_MASC[d],
+        }
+    }
+    fn teen(&self, d: usize) -> &'static str {
+        TEENS[d]
+    }
+    fn ten(&self, d: usize) -> &'static str {
+        TENS[d]
+    }
+    fn hundred(&self, d: usize) -> &'static str {
+        HUNDREDS[d]
     }
 
-    let mut divisor = CHUNK_DELIMITER.pow(max_scale as u32);
-    let mut first_chunk = true;
-
-    for scale_idx in (0..=max_scale).rev() {
-        let chunk = (n / divisor) % CHUNK_DELIMITER;
-        divisor /= CHUNK_DELIMITER;
-
-        if chunk == 0 {
-            continue;
-        }
-
-        if !first_chunk {
-            out.write_char(' ')?;
-        }
-        first_chunk = false;
-
-        let is_feminine = scale_idx == FEMININE_SCALE;
-        verbalize_chunk(chunk, is_feminine, out)?;
-
-        if scale_idx > 0 {
-            out.write_char(' ')?;
-            out.write_str(select_scale_form(chunk, scale_idx))?;
+    fn scale_form(&self, idx: usize, form: PluralForm) -> &'static str {
+        let (one, few, many) = SCALES.get(idx).copied().unwrap_or(("", "", ""));
+        match form {
+            PluralForm::One => one,
+            PluralForm::Few => few,
+            PluralForm::Many => many,
         }
     }
 
-    Ok(())
-}
-
-fn verbalize_chunk<W: Write>(n: u64, feminine: bool, out: &mut W) -> Result<(), VerbalizeError> {
-    let hundreds = (n / DELIMITER) as usize;
-    let tens = ((n / BASE) % BASE) as usize;
-    let units = (n % BASE) as usize;
-
-    let mut needs_space = false;
-    let mut write_word = |word: &str| -> Result<(), VerbalizeError> {
-        if needs_space {
-            out.write_char(' ')?;
-        }
-        out.write_str(word)?;
-        needs_space = true;
-        Ok(())
-    };
-
-    if hundreds > 0 {
-        write_word(HUNDREDS[hundreds])?;
-    }
-
-    if tens == 1 {
-        write_word(TEENS[units])?;
-    } else if tens >= 2 {
-        write_word(TENS[tens])?;
-    }
-
-    if units > 0 && tens != 1 {
-        write_word(if feminine {
-            UNITS_FEM[units]
+    fn plural_for_chunk(&self, chunk: u64, _scale_idx: usize) -> PluralForm {
+        let last2 = chunk % 100;
+        let last1 = chunk % 10;
+        if last1 == 1 && last2 != 11 {
+            PluralForm::One
+        } else if (2..=4).contains(&last1) && !(12..=14).contains(&last2) {
+            PluralForm::Few
         } else {
-            UNITS_MASC[units]
-        })?;
+            PluralForm::Many
+        }
     }
 
-    Ok(())
+    fn unit_gender_for_scale(&self, scale_idx: usize) -> Gender {
+        if scale_idx == 1 {
+            Gender::Fem
+        } else {
+            Gender::Masc
+        }
+    }
 }
 
-fn select_scale_form(n: u64, scale_idx: usize) -> &'static str {
-    let (one, few, many) = SCALES[scale_idx];
-    let last_digit = n % BASE;
-    let last_two = n % DELIMITER;
+static RU_VERBALIZER: RussianVerbalizer = RussianVerbalizer;
 
-    if last_digit == 1 && last_two != 11 {
-        one
-    } else if (2..=4).contains(&last_digit) && !(12..=14).contains(&last_two) {
-        few
-    } else {
-        many
-    }
+inventory::submit! {
+    &RU_VERBALIZER as &'static dyn crate::verbality::Verbalizer
 }
 
 const UNITS_MASC: &[&str] = &[

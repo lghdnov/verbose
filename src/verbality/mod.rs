@@ -2,15 +2,17 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::LazyLock;
 
+pub mod core;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum VerbalizeError {
     NumberTooLarge(u64, u64),
-    FmtError(std::fmt::Error),
+    Fmt(std::fmt::Error),
 }
 
 impl From<std::fmt::Error> for VerbalizeError {
     fn from(err: std::fmt::Error) -> Self {
-        Self::FmtError(err)
+        Self::Fmt(err)
     }
 }
 
@@ -20,17 +22,42 @@ impl fmt::Display for VerbalizeError {
             VerbalizeError::NumberTooLarge(n, m) => {
                 write!(f, "Number {} exceeds maximum supported value {}", n, m)
             }
-            VerbalizeError::FmtError(err) => write!(f, "Fmt error: {}", err),
+            VerbalizeError::Fmt(err) => write!(f, "Fmt error: {}", err),
         }
     }
 }
 
 impl std::error::Error for VerbalizeError {}
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Gender {
+    Masc,
+    Fem,
+    Neut,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PluralForm {
+    One,
+    Few,
+    Many,
+}
+
 pub trait Verbalizer: Send + Sync {
     fn code(&self) -> &'static str;
     fn name(&self) -> &'static str;
     fn verbalize(&self, n: u64) -> Result<String, VerbalizeError>;
+
+    fn zero(&self) -> &'static str;
+    fn chunk_base(&self) -> u64;
+    fn unit(&self, digit: usize, gender: Gender) -> &'static str;
+    fn teen(&self, digit: usize) -> &'static str;
+    fn ten(&self, digit: usize) -> &'static str;
+    fn hundred(&self, digit: usize) -> &'static str;
+
+    fn scale_form(&self, scale_idx: usize, form: PluralForm) -> &'static str;
+    fn plural_for_chunk(&self, chunk: u64, scale_idx: usize) -> PluralForm;
+    fn unit_gender_for_scale(&self, scale_idx: usize) -> Gender;
 }
 
 inventory::collect!(&'static dyn Verbalizer);
@@ -72,6 +99,8 @@ pub fn registry() -> &'static VerbalizerRegistry {
 #[macro_export]
 macro_rules! register_verbalizer {
     ($v:expr) => {
-        inventory::submit!($v as &'static dyn $crate::verbality::Verbalizer);
+        inventory::submit! {
+            &$v as &'static dyn $crate::verbality::Verbalizer
+        }
     };
 }
