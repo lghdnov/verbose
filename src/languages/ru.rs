@@ -47,11 +47,19 @@ impl Verbalizer for RussianVerbalizer {
     }
 
     fn plural_for_chunk(&self, chunk: u64, _scale_idx: usize) -> PluralForm {
-        let last2 = chunk % 100;
-        let last1 = chunk % 10;
-        if last1 == 1 && last2 != 11 {
+        const EXCEPTION_START: u64 = 12;
+        const EXCEPTION_END: u64 = 14;
+
+        let last_two_digits = chunk % 100;
+        let last_digit = chunk % 10;
+
+        let is_singular = last_digit == 1 && last_two_digits != 11;
+        let is_few = (2..=4).contains(&last_digit)
+            && !(EXCEPTION_START..=EXCEPTION_END).contains(&last_two_digits);
+
+        if is_singular {
             PluralForm::One
-        } else if (2..=4).contains(&last1) && !(12..=14).contains(&last2) {
+        } else if is_few {
             PluralForm::Few
         } else {
             PluralForm::Many
@@ -59,10 +67,9 @@ impl Verbalizer for RussianVerbalizer {
     }
 
     fn unit_gender_for_scale(&self, scale_idx: usize) -> Gender {
-        if scale_idx == 1 {
-            Gender::Fem
-        } else {
-            Gender::Masc
+        match scale_idx {
+            1 => Gender::Fem,
+            _ => Gender::Masc,
         }
     }
 }

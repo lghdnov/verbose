@@ -12,33 +12,32 @@ pub fn verbalize_number<L: Verbalizer, W: Write>(
         return out.write_str(lang.zero()).map_err(VerbalizeError::Fmt);
     }
 
+    let base = lang.chunk_base();
+    assert!(base > 1, "base should be greater than 1");
+    let mut max_scale = 0;
     let mut temp = n;
-    let mut max_scale = 0usize;
-    while temp >= lang.chunk_base() {
-        temp /= lang.chunk_base();
+    while temp >= base {
+        temp /= base;
         max_scale += 1;
     }
 
-    let mut divisor = 1u64;
-    for _ in 0..max_scale {
-        divisor *= lang.chunk_base();
-    }
+    let mut divisor = base.pow(max_scale as u32);
+    let mut need_sep = false;
 
-    let mut first = true;
     for scale_idx in (0..=max_scale).rev() {
-        let chunk = (n / divisor) % lang.chunk_base();
-        divisor /= lang.chunk_base();
+        let chunk = (n / divisor) % base;
+        divisor /= base;
 
         if chunk == 0 {
             continue;
         }
 
-        if !first {
+        if need_sep {
             out.write_char(' ')?;
         }
-        first = false;
+        need_sep = true;
 
-        write_chunk::<L, W>(lang, chunk, lang.unit_gender_for_scale(scale_idx), out)?;
+        write_chunk(lang, chunk, lang.unit_gender_for_scale(scale_idx), out)?;
 
         if scale_idx > 0 {
             out.write_char(' ')?;
@@ -46,19 +45,7 @@ pub fn verbalize_number<L: Verbalizer, W: Write>(
             out.write_str(lang.scale_form(scale_idx, form))?;
         }
     }
-    Ok(())
-}
 
-fn write_word<W: Write>(
-    out: &mut W,
-    word: &str,
-    need_space: &mut bool,
-) -> Result<(), VerbalizeError> {
-    if *need_space {
-        out.write_char(' ')?;
-    }
-    out.write_str(word)?;
-    *need_space = true;
     Ok(())
 }
 
@@ -72,21 +59,31 @@ fn write_chunk<L: Verbalizer, W: Write>(
     let t = ((n / 10) % 10) as usize;
     let u = (n % 10) as usize;
 
-    let mut need_space = false;
-    let mut write = |w: &str| -> Result<(), VerbalizeError> { write_word(out, w, &mut need_space) };
+    let mut need_sep = false;
+    let mut write = |word: &str| -> Result<(), VerbalizeError> {
+        if need_sep {
+            out.write_char(' ')?;
+        }
+        out.write_str(word)?;
+        need_sep = true;
+        Ok(())
+    };
 
     if h > 0 {
         write(lang.hundred(h))?;
     }
-    if t == 1 {
-        write(lang.teen(u))?;
-    } else {
-        if t > 1 {
+
+    match t {
+        1 => write(lang.teen(u))?,
+        2..=9 => {
             write(lang.ten(t))?;
+            if u > 0 {
+                write(lang.unit(u, unit_gender))?;
+            }
         }
-        if u > 0 {
-            write(lang.unit(u, unit_gender))?;
-        }
+        _ if u > 0 => write(lang.unit(u, unit_gender))?,
+        _ => {}
     }
+
     Ok(())
 }
