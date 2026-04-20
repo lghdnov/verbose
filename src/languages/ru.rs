@@ -1,4 +1,4 @@
-use crate::verbality::{core::verbalize_number, *};
+use crate::{register_verbalizer, verbality::{core::verbalize_number, *}};
 
 pub struct RussianVerbalizer;
 
@@ -47,22 +47,11 @@ impl Verbalizer for RussianVerbalizer {
     }
 
     fn plural_for_chunk(&self, chunk: u64, _scale_idx: usize) -> PluralForm {
-        const EXCEPTION_START: u64 = 12;
-        const EXCEPTION_END: u64 = 14;
-
-        let last_two_digits = chunk % 100;
-        let last_digit = chunk % 10;
-
-        let is_singular = last_digit == 1 && last_two_digits != 11;
-        let is_few = (2..=4).contains(&last_digit)
-            && !(EXCEPTION_START..=EXCEPTION_END).contains(&last_two_digits);
-
-        if is_singular {
-            PluralForm::One
-        } else if is_few {
-            PluralForm::Few
-        } else {
-            PluralForm::Many
+        match chunk % 100 {
+            11..=14 => PluralForm::Many,
+            n if n % 10 == 1 => PluralForm::One,
+            n if matches!(n % 10, 2..=4) => PluralForm::Few,
+            _ => PluralForm::Many,
         }
     }
 
@@ -75,10 +64,7 @@ impl Verbalizer for RussianVerbalizer {
 }
 
 static RU_VERBALIZER: RussianVerbalizer = RussianVerbalizer;
-
-inventory::submit! {
-    &RU_VERBALIZER as &'static dyn crate::verbality::Verbalizer
-}
+register_verbalizer!(RU_VERBALIZER);
 
 const UNITS_MASC: &[&str] = &[
     "",
