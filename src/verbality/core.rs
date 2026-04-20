@@ -3,13 +3,17 @@ use std::fmt::Write;
 use crate::verbality::Gender;
 use crate::*;
 
+const MAX: u64 = 1_000_000_000_000_000;
+
 pub fn verbalize_number<L: Verbalizer, W: Write>(
     lang: &L,
     n: u64,
     out: &mut W,
 ) -> Result<(), VerbalizeError> {
-    if n == 0 {
-        return out.write_str(lang.zero()).map_err(VerbalizeError::Fmt);
+    match n {
+        0 => return out.write_str(lang.zero()).map_err(VerbalizeError::Fmt),
+        n if n >= MAX => return Err(VerbalizeError::NumberTooLarge(n, MAX)),
+        _ => (),
     }
 
     let base = lang.chunk_base();

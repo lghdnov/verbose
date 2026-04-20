@@ -1,4 +1,7 @@
-use crate::{register_verbalizer, verbality::{core::verbalize_number, *}};
+use crate::{
+    register_verbalizer,
+    verbality::{core::verbalize_number, *},
+};
 
 pub struct RussianVerbalizer;
 
@@ -174,5 +177,33 @@ mod tests {
         let v = RussianVerbalizer;
         assert_eq!(v.verbalize(1_000_000).unwrap(), "один миллион");
         assert_eq!(v.verbalize(2_000_000).unwrap(), "два миллиона");
+    }
+
+    #[test]
+    fn large_numbers() {
+        let v = RussianVerbalizer;
+        assert_eq!(
+            v.verbalize(999_000_000_000_000).unwrap(),
+            "девятьсот девяносто девять триллионов"
+        );
+        assert_eq!(
+            v.verbalize(999_000_000_000_001).unwrap(),
+            "девятьсот девяносто девять триллионов один"
+        );
+    }
+
+    #[test]
+    fn unsupported_numbers() {
+        let v = RussianVerbalizer;
+        assert!(v.verbalize(1_000_000_000_000_000).is_err());
+    }
+
+    #[test]
+    fn edge_cases() {
+        let v = RussianVerbalizer;
+        assert_eq!(v.verbalize(200).unwrap(), "двести");
+        assert_eq!(v.verbalize(101).unwrap(), "сто один");
+        assert_eq!(v.verbalize(111).unwrap(), "сто одиннадцать");
+        assert_eq!(v.verbalize(1001).unwrap(), "одна тысяча один");
     }
 }
