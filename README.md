@@ -34,4 +34,3 @@ verbose 1234567 --lang sv
 
 - `en` - English
 - `ru` - Russian
-- `sv` - Swedish
