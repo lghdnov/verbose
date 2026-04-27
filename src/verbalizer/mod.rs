@@ -4,7 +4,7 @@ pub mod types;
 
 pub use core::verbalize_number;
 pub use error::VerbalizeError;
-pub use types::{registry, Gender, PluralForm, Verbalizer, VerbalizerRegistry};
+pub use types::{registry, Gender, PluralForm, Verbalizer, VerbalizerBackend, VerbalizerRegistry};
 
 #[macro_export]
 macro_rules! register_verbalizer {

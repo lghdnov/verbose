@@ -1,11 +1,11 @@
 use std::fmt::Write;
 
 use crate::verbalizer::error::VerbalizeError;
-use crate::verbalizer::types::{Gender, Verbalizer};
+use crate::verbalizer::types::{Gender, VerbalizerBackend};
 
 const MAX: u64 = 1_000_000_000_000_000;
 
-pub fn verbalize_number<L: Verbalizer, W: Write>(
+pub fn verbalize_number<L: VerbalizerBackend, W: Write>(
     lang: &L,
     n: u64,
     out: &mut W,
@@ -39,7 +39,7 @@ pub fn verbalize_number<L: Verbalizer, W: Write>(
     Ok(())
 }
 
-fn verbalize_chunk<L: Verbalizer, W: Write>(
+fn verbalize_chunk<L: VerbalizerBackend, W: Write>(
     lang: &L,
     n: u64,
     unit_gender: Gender,
@@ -68,7 +68,7 @@ fn verbalize_chunk<L: Verbalizer, W: Write>(
     Ok(())
 }
 
-fn verbalize_scale<L: Verbalizer, W: Write>(
+fn verbalize_scale<L: VerbalizerBackend, W: Write>(
     lang: &L,
     ch: u64,
     scale_idx: usize,

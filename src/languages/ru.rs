@@ -1,21 +1,16 @@
 use crate::{
     register_verbalizer,
-    verbalizer::{core::verbalize_number, error::VerbalizeError, types::*},
+    verbalizer::{types::VerbalizerBackend, Gender, PluralForm},
 };
 
 pub struct RussianVerbalizer;
 
-impl Verbalizer for RussianVerbalizer {
+impl VerbalizerBackend for RussianVerbalizer {
     fn code(&self) -> &'static str {
         "ru"
     }
     fn name(&self) -> &'static str {
         "Русский"
-    }
-    fn verbalize(&self, n: u64) -> Result<String, VerbalizeError> {
-        let mut out = String::with_capacity(128);
-        verbalize_number::<RussianVerbalizer, _>(self, n, &mut out)?;
-        Ok(out)
     }
 
     fn zero(&self) -> &'static str {
@@ -145,6 +140,7 @@ const SCALES: &[(&str, &str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::verbalizer::types::Verbalizer;
 
     #[test]
     fn basic() {
