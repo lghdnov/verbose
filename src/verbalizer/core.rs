@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
-use crate::verbality::Gender;
-use crate::*;
+use crate::verbalizer::error::VerbalizeError;
+use crate::verbalizer::types::{Gender, Verbalizer};
 
 const MAX: u64 = 1_000_000_000_000_000;
 

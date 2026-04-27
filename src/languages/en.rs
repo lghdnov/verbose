@@ -1,6 +1,6 @@
 use crate::{
     register_verbalizer,
-    verbality::{core::verbalize_number, *},
+    verbalizer::{core::verbalize_number, error::VerbalizeError, types::*},
 };
 
 pub struct EnglishVerbalizer;

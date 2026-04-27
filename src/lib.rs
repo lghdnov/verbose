@@ -1,4 +1,4 @@
 pub mod languages;
-pub mod verbality;
+pub mod verbalizer;
 
-pub use verbality::{VerbalizeError, Verbalizer, VerbalizerRegistry};
+pub use verbalizer::{VerbalizeError, Verbalizer, VerbalizerRegistry};

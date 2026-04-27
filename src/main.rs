@@ -1,5 +1,5 @@
 use clap::{CommandFactory, FromArgMatches, Parser};
-use verbose::verbality;
+use verbose::verbalizer;
 
 #[derive(Parser, Debug)]
 #[command(name = "verbose")]
@@ -13,7 +13,7 @@ struct Args {
 }
 
 fn main() {
-    let registry = verbality::registry();
+    let registry = verbalizer::registry();
     let langs = registry.codes_string();
     let mut cmd = Args::command();
     cmd = cmd.mut_arg("lang", |arg| arg.help(format!("Language ({})", langs)));
